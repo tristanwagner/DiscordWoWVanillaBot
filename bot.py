@@ -1,5 +1,5 @@
 from fuzzywuzzy import process
-import logging, os, discord, asyncio,sys,csv
+import logging, os, discord, asyncio,sys,csv,traceback
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 
@@ -15,6 +15,9 @@ logger.addHandler(handler)
 
 client = discord.Client()
 
+dbUrl = 'https://classicdb.ch/?item='
+dbQuestUrl = 'https://classicdb.ch/?quest='
+
 @client.event
 async def on_ready():
 	print('logged in as')
@@ -27,7 +30,7 @@ async def on_message(message):
 	if message.content.startswith('!help'):
 		await client.send_message(message.channel, 'Find item\'s tooltip :\n- "!finditem #NAME" - Example -> !finditem thunderfury\n- "!finditem #VANILLAGAMINGITEMID" - Example -> !finditem 18402')
 		await client.send_message(message.channel, 'Finding player :\n- "!findplayer #NAME"')
-	elif (message.content.startswith('!finditem')):
+	elif (message.content.startswith('!finditem' or '!fi')):
 		await client.send_message(message.channel, 'Looking for item...')
 		foundFile = False
 		delete = True
@@ -41,12 +44,7 @@ async def on_message(message):
 					else:
 						itemid = finditemidfromname(newArgs[1])
 				else:
-					name = ''
-					for i in range(1, len(newArgs)):
-						name += newArgs[i]
-						if i  != len(newArgs):
-							name += ' '
-					itemid = finditemidfromname(name)
+					itemid = finditemidfromname(rebuildname(newArgs))
 				if findimagefromcache(itemid):
 					delete = False
 				else:
@@ -54,7 +52,7 @@ async def on_message(message):
 					takeimage(itemid)
 				try:
 					with open(cachefolder + itemid + '.png', 'rb') as f:
-						await client.send_file(message.channel, f, content=str('http://db.vanillagaming.org/?item=' + str(itemid)))
+						await client.send_file(message.channel, f, content=str(dbUrl + str(itemid)))
 						foundFile = True
 				except:
 					await client.send_message(message.channel, 'Error Finding Item, make sure you pass the right item ID')
@@ -66,7 +64,7 @@ async def on_message(message):
 		if delete and foundFile and cachetrigger is False:
 			os.remove(cachefolder + str(itemid) + '.png')
 			print(str(itemid) + '.png removed ')
-	elif (message.content.startswith('!findplayer')):
+	elif (message.content.startswith('!findplayer' or '!fp')):
 		await client.send_message(message.channel, 'Looking for Player...')
 		try:
 			newArgs = message.content.split(' ')
@@ -76,8 +74,25 @@ async def on_message(message):
 				except:
 					await client.send_message(message.channel, "Couldn't find player")
 		except:
-			await client.send_message(message.channel, "Couldn't find player")
-
+			await client.send_message(message.channel, 'Command Error')
+	elif (message.content.startswith('!findquest' or '!fq')):
+		await client.send_message(message.channel, 'Looking for Quest...')
+		try:
+			newArgs = message.content.split(' ')
+			if (len(newArgs) == 2):
+				if newArgs[1].isdigit():
+					itemid = newArgs[1]
+				else:
+					itemid = findquestidfromname(newArgs[1])
+			else:		
+				itemid = findquestidfromname(rebuildname(newArgs))			
+			if (itemid):
+				await client.send_message(message.channel, str(dbQuestUrl + str(itemid)))
+			else:
+				await client.send_message(message.channel, "Couldn't find quest")
+		except Exception:
+			print(traceback.format_exc())
+			await client.send_message(message.channel, "Couldn't find quest")
 
 def takeimage(itemID):
 	#setup browser for running in background
@@ -86,17 +101,18 @@ def takeimage(itemID):
 	binary.add_command_line_options('-headless')
 	browser = webdriver.Firefox(executable_path=GECKODRIVER_PATH,firefox_binary=binary)
 	#request item url
-	browser.get('http://db.vanillagaming.org/?item=' + itemID)
+	browser.get(dbUrl + itemID)
+
 	try:
 		browser.find_element_by_class_name('tooltip').screenshot(cachefolder + str(itemID) + '.png')
-		print('Tooltip for item id : %s found at %s\nSaved at %s' % (itemID, str('http://db.vanillagaming.org/?item=' + str(itemID)), str(cachefolder+ str(itemID) + '.png')))
+		print('Tooltip for item id : %s found at %s\nSaved at %s' % (itemID, str(dbUrl + str(itemID)), str(cachefolder+ str(itemID) + '.png')))
 	except:
-		print('Tooltip for item id : %s not found at %s' % (itemID, str('http://db.vanillagaming.org/?item=' + str(itemID))))
+		print('Tooltip for item id : %s not found at %s' % (itemID, str(dbUrl + str(itemID))))
 	browser.close()
 
 
 def findplayer(playerName):
-	realmPlayers = 'http://realmplayers.com/CharacterViewer.aspx?realm=LB&player='
+	realmPlayers = 'https://legacyplayers.com/Search/?search='
 	return (realmPlayers + playerName)
 
 def findimagefromcache(itemID):
@@ -116,6 +132,24 @@ def finditemidfromname(name):
 		items = inititemsdict()
 	return items[process.extractOne(name, items.keys())[0]]
 
+def findquestidfromname(name):
+	global quests
+	if not bool(quests):
+		quests = initquestsdict()
+	print(quests)
+	data = process.extractOne(name, quests.keys())
+	print(data)
+	return quests[data[0]]
+
+def initquestsdict():
+	print('initquestsdict')
+	quests = {}
+	with open('quests.csv', 'r') as f:
+		print('csv opened')
+		reader = csv.DictReader(f)
+		for row in reader:
+			quests[row['Title']] = row['entry']
+	return quests
 
 def inititemsdict():
 	items = {}
@@ -124,6 +158,14 @@ def inititemsdict():
 		for row in reader:
 			items[row['name']] = row['entry']
 	return items
+
+def rebuildname(args):
+	name = ''
+	for i in range(1, len(args)):
+		name += args[i]
+		if i  != len(args):
+			name += ' '
+	return name
 
 if __name__ == '__main__':
 	myargs = sys.argv
@@ -138,6 +180,8 @@ if __name__ == '__main__':
 	print(myargs)
 	global items
 	items = inititemsdict()
+	global quests
+	quests = initquestsdict()
 
 
-client.run('token')
+client.run('MzkwOTk1MjY2OTg5MzI2MzQ2.DRSORg.-e_aMd2pSRO3Mqh5rHdul5u39nE')
