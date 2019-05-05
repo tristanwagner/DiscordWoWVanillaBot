@@ -17,6 +17,7 @@ client = discord.Client()
 
 dbUrl = 'https://classicdb.ch/?item='
 dbQuestUrl = 'https://classicdb.ch/?quest='
+dbNpcUrl = 'https://classicdb.ch/?npc='
 
 @client.event
 async def on_ready():
@@ -29,9 +30,10 @@ async def on_ready():
 async def on_message(message):
 	if message.content.startswith('!help'):
 		await client.send_message(message.channel, 'Find item\'s tooltip :\n- "!finditem <NAME/ID>" or "!fi <NAME/ID>" - Example -> !finditem thunderfury\n- "!finditem #VANILLAGAMINGITEMID" - Example -> !finditem 18402')
-		await client.send_message(message.channel, 'Finding player :\n- "!findplayer <NAME>" or "!fp <NAME>"')
-		await client.send_message(message.channel, 'Finding quest :\n- "!finquest <NAME/ID>" or "!fq <NAME/ID>"')
-	elif (message.content.startswith(('!finditem', '!fi'))):
+		await client.send_message(message.channel, 'Finding Player :\n- "!findplayer <NAME>" or "!fp <NAME>"')
+		await client.send_message(message.channel, 'Finding Quest :\n- "!findquest <NAME/ID>" or "!fq <NAME/ID>"')
+		await client.send_message(message.channel, 'Finding NPC :\n- "!findnpc <NAME/ID>" or "!fn <NAME/ID>"')
+	elif (message.content.startswith(('!finditem', '!fi', '!i', '!item'))):
 		await client.send_message(message.channel, 'Looking for item...')
 		foundFile = False
 		delete = True
@@ -43,9 +45,9 @@ async def on_message(message):
 					if newArgs[1].isdigit():
 						itemid = newArgs[1]
 					else:
-						itemid = finditemidfromname(newArgs[1])
+						itemid = findItemIDFromName(newArgs[1])
 				else:
-					itemid = finditemidfromname(rebuildname(newArgs))
+					itemid = findItemIDFromName(rebuildName(newArgs))
 				if findimagefromcache(itemid):
 					delete = False
 				else:
@@ -65,7 +67,7 @@ async def on_message(message):
 		if delete and foundFile and cachetrigger is False:
 			os.remove(cachefolder + str(itemid) + '.png')
 			print(str(itemid) + '.png removed ')
-	elif (message.content.startswith(('!findplayer', '!fp'))):
+	elif (message.content.startswith(('!findplayer', '!fp', '!p', '!player'))):
 		await client.send_message(message.channel, 'Looking for Player...')
 		try:
 			newArgs = message.content.split(' ')
@@ -76,7 +78,7 @@ async def on_message(message):
 					await client.send_message(message.channel, "Couldn't find player")
 		except:
 			await client.send_message(message.channel, 'Command Error')
-	elif (message.content.startswith(('!findquest', '!fq'))):
+	elif (message.content.startswith(('!findquest', '!fq', '!q', '!quest'))):
 		await client.send_message(message.channel, 'Looking for Quest...')
 		try:
 			newArgs = message.content.split(' ')
@@ -84,9 +86,9 @@ async def on_message(message):
 				if newArgs[1].isdigit():
 					itemid = newArgs[1]
 				else:
-					itemid = findquestidfromname(newArgs[1])
+					itemid = findQuestIDFromName(newArgs[1])
 			else:		
-				itemid = findquestidfromname(rebuildname(newArgs))			
+				itemid = findQuestIDFromName(rebuildName(newArgs))			
 			if (itemid):
 				await client.send_message(message.channel, str(dbQuestUrl + str(itemid)))
 			else:
@@ -94,6 +96,24 @@ async def on_message(message):
 		except Exception:
 			print(traceback.format_exc())
 			await client.send_message(message.channel, "Couldn't find quest")
+	elif (message.content.startswith(('!findnpc', '!fn', '!n', '!npc'))):
+		await client.send_message(message.channel, 'Looking for NPC...')
+		try:
+			newArgs = message.content.split(' ')
+			if (len(newArgs) == 2):
+				if newArgs[1].isdigit():
+					itemid = newArgs[1]
+				else:
+					itemid = findNpcIDFromName(newArgs[1])
+			else:		
+				itemid = findNpcIDFromName(rebuildName(newArgs))			
+			if (itemid):
+				await client.send_message(message.channel, str(dbNpcUrl + str(itemid)))
+			else:
+				await client.send_message(message.channel, "Couldn't find npc")
+		except Exception:
+			print(traceback.format_exc())
+			await client.send_message(message.channel, "Couldn't find npc")	
 
 def takeimage(itemID):
 	#setup browser for running in background
@@ -127,30 +147,36 @@ def findimagefromcache(itemID):
 	print('Item not found in cache folder')
 	return False
 
-def finditemidfromname(name):
+def findItemIDFromName(name):
 	global items
 	if not bool(items):
-		items = inititemsdict()
+		items = initItemsDict()
 	return items[process.extractOne(name, items.keys())[0]]
 
-def findquestidfromname(name):
+def findQuestIDFromName(name):
 	global quests
 	if not bool(quests):
-		quests = initquestsdict()
+		quests = initQuestsDict()
 	data = process.extractOne(name, quests.keys())
 	return quests[data[0]]
 
-def initquestsdict():
-	print('initquestsdict')
+def findNpcIDFromName(name):
+	global npcs
+	if not bool(npcs):
+		npcs = initNpcsDict()
+	data = process.extractOne(name, npcs.keys())
+	return npcs[data[0]]
+
+
+def initQuestsDict():
 	quests = {}
 	with open('quests.csv', 'r') as f:
-		print('csv opened')
 		reader = csv.DictReader(f)
 		for row in reader:
 			quests[row['Title']] = row['entry']
 	return quests
 
-def inititemsdict():
+def initItemsDict():
 	items = {}
 	with open('items.csv', 'r') as f:
 		reader = csv.DictReader(f)
@@ -158,7 +184,15 @@ def inititemsdict():
 			items[row['name']] = row['entry']
 	return items
 
-def rebuildname(args):
+def initNpcDict():
+	npcs = {}
+	with open('creature.csv', 'r') as f:
+		reader = csv.DictReader(f)
+		for row in reader:
+			npcs[row['name']] = row['entry']
+	return npcs
+
+def rebuildName(args):
 	name = ''
 	for i in range(1, len(args)):
 		name += args[i]
@@ -177,10 +211,10 @@ if __name__ == '__main__':
 		        print('Error while creating the cache folder')
 	print('Cache is {0}'.format(cachetrigger))
 	print(myargs)
-	global items
-	items = inititemsdict()
-	global quests
-	quests = initquestsdict()
+	global items, quests, npcs
+	items = initItemsDict()
+	quests = initQuestsDict()
+	npcs = initNpcDict()
 
 
 client.run('MzkwOTk1MjY2OTg5MzI2MzQ2.DRSORg.-e_aMd2pSRO3Mqh5rHdul5u39nE')
