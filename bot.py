@@ -28,8 +28,9 @@ async def on_ready():
 @client.event
 async def on_message(message):
 	if message.content.startswith('!help'):
-		await client.send_message(message.channel, 'Find item\'s tooltip :\n- "!finditem #NAME" - Example -> !finditem thunderfury\n- "!finditem #VANILLAGAMINGITEMID" - Example -> !finditem 18402')
-		await client.send_message(message.channel, 'Finding player :\n- "!findplayer #NAME"')
+		await client.send_message(message.channel, 'Find item\'s tooltip :\n- "!finditem <NAME/ID>" or "!fi <NAME/ID>" - Example -> !finditem thunderfury\n- "!finditem #VANILLAGAMINGITEMID" - Example -> !finditem 18402')
+		await client.send_message(message.channel, 'Finding player :\n- "!findplayer <NAME>" or "!fp <NAME>"')
+		await client.send_message(message.channel, 'Finding quest :\n- "!finquest <NAME/ID>" or "!fq <NAME/ID>"')
 	elif (message.content.startswith('!finditem' or '!fi')):
 		await client.send_message(message.channel, 'Looking for item...')
 		foundFile = False
