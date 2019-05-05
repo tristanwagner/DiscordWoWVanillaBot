@@ -31,7 +31,7 @@ async def on_message(message):
 		await client.send_message(message.channel, 'Find item\'s tooltip :\n- "!finditem <NAME/ID>" or "!fi <NAME/ID>" - Example -> !finditem thunderfury\n- "!finditem #VANILLAGAMINGITEMID" - Example -> !finditem 18402')
 		await client.send_message(message.channel, 'Finding player :\n- "!findplayer <NAME>" or "!fp <NAME>"')
 		await client.send_message(message.channel, 'Finding quest :\n- "!finquest <NAME/ID>" or "!fq <NAME/ID>"')
-	elif (message.content.startswith('!finditem' or '!fi')):
+	elif (message.content.startswith(('!finditem', '!fi'))):
 		await client.send_message(message.channel, 'Looking for item...')
 		foundFile = False
 		delete = True
@@ -65,7 +65,7 @@ async def on_message(message):
 		if delete and foundFile and cachetrigger is False:
 			os.remove(cachefolder + str(itemid) + '.png')
 			print(str(itemid) + '.png removed ')
-	elif (message.content.startswith('!findplayer' or '!fp')):
+	elif (message.content.startswith(('!findplayer', '!fp'))):
 		await client.send_message(message.channel, 'Looking for Player...')
 		try:
 			newArgs = message.content.split(' ')
@@ -76,7 +76,7 @@ async def on_message(message):
 					await client.send_message(message.channel, "Couldn't find player")
 		except:
 			await client.send_message(message.channel, 'Command Error')
-	elif (message.content.startswith('!findquest' or '!fq')):
+	elif (message.content.startswith(('!findquest', '!fq'))):
 		await client.send_message(message.channel, 'Looking for Quest...')
 		try:
 			newArgs = message.content.split(' ')
@@ -137,9 +137,7 @@ def findquestidfromname(name):
 	global quests
 	if not bool(quests):
 		quests = initquestsdict()
-	print(quests)
 	data = process.extractOne(name, quests.keys())
-	print(data)
 	return quests[data[0]]
 
 def initquestsdict():
