@@ -48,6 +48,7 @@ async def on_message(message):
 						itemid = findItemIDFromName(newArgs[1])
 				else:
 					itemid = findItemIDFromName(rebuildName(newArgs))
+				await client.send_message(message.channel, str(dbUrl + str(itemid)))
 				if findimagefromcache(itemid):
 					delete = False
 				else:
@@ -55,7 +56,7 @@ async def on_message(message):
 					takeimage(itemid)
 				try:
 					with open(cachefolder + itemid + '.png', 'rb') as f:
-						await client.send_file(message.channel, f, content=str(dbUrl + str(itemid)))
+						await client.send_file(message.channel, f)
 						foundFile = True
 				except:
 					await client.send_message(message.channel, 'Error Finding Item, make sure you pass the right item ID')
